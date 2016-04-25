@@ -5,7 +5,7 @@ import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.linalg.SingularValueDecomposition;
 
 // Torgerson Classical MDS (1952)
-// R is a n x n relational matrix of dissimilarities (assumed to be Euclidean distances)
+// R is a n x n relational matrix of similarities (assumed to be Euclidean distances)
 // p is the dimensionality of the target space 
 // X are the projected points
 public class ClassicalMds {
