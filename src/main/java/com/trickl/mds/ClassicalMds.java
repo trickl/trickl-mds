@@ -20,7 +20,7 @@ public class ClassicalMds {
     }
     
     
-    DoubleMatrix2D getReducedSpace() {
+    public DoubleMatrix2D getReducedSpace() {
         // First need to construct double centred distance matrix B of scalar products
         int n = R.rows();
 

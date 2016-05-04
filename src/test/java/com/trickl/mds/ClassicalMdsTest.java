@@ -29,7 +29,7 @@ public class ClassicalMdsTest {
 
       // Generate similarity data
       EuclideanDistance distance = new EuclideanDistance();
-      DoubleMatrix2D R = distance.getSimilarities(data);
+      DoubleMatrix2D R = distance.getDistances(data);
       
       ClassicalMds mds = new ClassicalMds(R, 2);
       DoubleMatrix2D X = mds.getReducedSpace();
@@ -54,7 +54,7 @@ public class ClassicalMdsTest {
 
       // Generate similarity data
       EuclideanDistance distance = new EuclideanDistance();
-      DoubleMatrix2D R = distance.getSimilarities(data);
+      DoubleMatrix2D R = distance.getDistances(data);
       
       ClassicalMds mds = new ClassicalMds(R, 2);
       DoubleMatrix2D X = mds.getReducedSpace();

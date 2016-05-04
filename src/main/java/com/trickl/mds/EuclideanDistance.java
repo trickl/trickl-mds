@@ -1,28 +1,36 @@
 package com.trickl.mds;
 
 import cern.colt.matrix.DoubleFactory2D;
+import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 
-public class EuclideanDistance {
+public class EuclideanDistance implements DistanceMeasure {
     
-    public DoubleMatrix2D getSimilarities(DoubleMatrix2D X) {
+    @Override
+    public DoubleMatrix2D getDistances(DoubleMatrix2D X) {
         DoubleMatrix2D R = DoubleFactory2D.dense.make(X.rows(), X.rows());
         
         for (int i = 0; i < X.rows(); ++i) {
-            for (int j = 0; j < X.rows(); ++j) {
+            for (int j = i; j < X.rows(); ++j) {
                 if (i == j) {
                     R.set(i, i, 0);
                 }
                 else {
-                    double d2 = 0;
-                    for (int k = 0; k < X.columns(); ++k) {
-                        d2 += Math.pow(X.get(i, k) - X.get(j, k), 2);
-                    }
-
-                    R.set(i, j, Math.sqrt(d2));
+                    double distance = getDistance(X.viewRow(i), X.viewRow(j));
+                    R.set(i, j, distance);
+                    R.set(j, i, distance);                    
                 }
             }        
         }
         return R;
     }    
+    
+    @Override
+    public double getDistance(DoubleMatrix1D X, DoubleMatrix1D Y) {        
+        double d2 = 0;
+        for (int k = 0; k < X.size(); ++k) {
+            d2 += Math.pow(X.get(k) - Y.get(k), 2);
+        }
+        return  Math.sqrt(d2);
+    }  
 }
