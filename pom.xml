@@ -26,6 +26,11 @@
   </scm>
   <dependencies>
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>pca</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>colt</groupId>
       <artifactId>colt</artifactId>
       <version>${colt.version}</version>

@@ -1,26 +1,33 @@
 package com.trickl.mds;
 
+import cern.colt.matrix.DoubleFactory1D;
 import cern.colt.matrix.DoubleFactory2D;
+import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.linalg.SingularValueDecomposition;
+import com.trickl.pca.EigenspaceModel;
 
 // Torgerson Classical MDS (1952)
 // R is a n x n relational matrix of similarities (assumed to be Euclidean distances)
 // p is the dimensionality of the target space 
 // X are the projected points
-public class ClassicalMds {
+public class ClassicalMds implements EigenspaceModel {
     
     private int p;
     private DoubleMatrix2D R;
+    private DoubleMatrix2D X;
+    private DoubleMatrix2D mean;
+    private SingularValueDecomposition svd;
     
     public ClassicalMds(DoubleMatrix2D R, int p) {
         if (R.rows() != R.columns()) throw new IllegalArgumentException("Relation matrix must be square.");
         this.p = p;
-        this.R = R;        
+        this.R = R;   
+        
+        solve();
     }
-    
-    
-    public DoubleMatrix2D getReducedSpace() {
+        
+    private void solve() {
         // First need to construct double centred distance matrix B of scalar products
         int n = R.rows();
 
@@ -51,10 +58,10 @@ public class ClassicalMds {
         J.zMult(DJ, B, -0.5, 0, false, false);
         
         // Use svd to find B = ELE'
-        SingularValueDecomposition svd = new SingularValueDecomposition(B);
+        svd = new SingularValueDecomposition(B);
 
         // Can now use B to solve for the co-ordinates X = EL^0.5 (XX' = B)
-        DoubleMatrix2D X = DoubleFactory2D.dense.make(n, p);
+        X = DoubleFactory2D.dense.make(n, p);
         for (int i = 0; i < p; i++)
         {     
            double l = Math.sqrt(svd.getSingularValues()[i]);
@@ -64,6 +71,44 @@ public class ClassicalMds {
            }
         }
         
+        final double weight = 1. /  X.rows();
+        mean = X.like(X.rows() > 0 ? 1 : 0, X.columns());
+        X.forEachNonZero((int first, int second, double value) -> {
+            mean.setQuick(0, second, mean.getQuick(0, second) + value * weight);
+            return value;
+        });
+    }
+    
+    public DoubleMatrix2D getReducedSpace() 
+    {
         return X;
+    }
+
+    @Override
+    public DoubleMatrix1D getEigenvalues() {
+        // Not generally true, SVD is not an eigenvalue decomposition        
+        if (svd == null) return null;
+        double[] singularValues = svd.getSingularValues();
+        DoubleMatrix1D eigenvalues = DoubleFactory1D.dense.make(singularValues.length);
+        eigenvalues.assign(singularValues);
+        return eigenvalues;
+    }
+
+    @Override
+    public DoubleMatrix2D getEigenvectors() {
+        // Not generally true, SVD is not an eigenvalue decomposition
+        if (svd == null) return null;
+        return svd.getU(); 
+    }
+
+    @Override
+    public DoubleMatrix2D getMean() {
+        if (svd == null) return null;
+        return mean;
+    }
+
+    @Override
+    public double getWeight() {
+        return R.rows();
     }
 }
