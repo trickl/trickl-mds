@@ -13,16 +13,18 @@ import com.trickl.pca.EigenspaceModel;
 // X are the projected points
 public class ClassicalMds implements EigenspaceModel {
     
-    private int p;
-    private DoubleMatrix2D R;
-    private DoubleMatrix2D X;
-    private DoubleMatrix2D mean;
+    private final int p;
+    private final DoubleMatrix2D R;
+    private final DoubleMatrix2D X;
+    private final DoubleMatrix2D mean;
     private SingularValueDecomposition svd;
     
     public ClassicalMds(DoubleMatrix2D R, int p) {
         if (R.rows() != R.columns()) throw new IllegalArgumentException("Relation matrix must be square.");
         this.p = p;
         this.R = R;   
+        this.X = DoubleFactory2D.dense.make(R.rows(), p);
+        this.mean = X.like(X.rows() > 0 ? 1 : 0, X.columns());
         
         solve();
     }
@@ -60,8 +62,7 @@ public class ClassicalMds implements EigenspaceModel {
         // Use svd to find B = ELE'
         svd = new SingularValueDecomposition(B);
 
-        // Can now use B to solve for the co-ordinates X = EL^0.5 (XX' = B)
-        X = DoubleFactory2D.dense.make(n, p);
+        // Can now use B to solve for the co-ordinates X = EL^0.5 (XX' = B)        
         for (int i = 0; i < p; i++)
         {     
            double l = Math.sqrt(svd.getSingularValues()[i]);
@@ -71,8 +72,7 @@ public class ClassicalMds implements EigenspaceModel {
            }
         }
         
-        final double weight = 1. /  X.rows();
-        mean = X.like(X.rows() > 0 ? 1 : 0, X.columns());
+        final double weight = 1. /  X.rows();        
         X.forEachNonZero((int first, int second, double value) -> {
             mean.setQuick(0, second, mean.getQuick(0, second) + value * weight);
             return value;
