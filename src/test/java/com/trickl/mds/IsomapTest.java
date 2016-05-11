@@ -25,11 +25,16 @@ public class IsomapTest {
         SwissRoll3D swissRoll = new SwissRoll3D();
         swissRoll.setRandomEngine(new MersenneTwister(123456789));
         swissRoll.setNormal(normal);
-        swissRoll.setRevolutions(0.3);
-        DoubleMatrix2D data = swissRoll.generate(100);
+        swissRoll.setRevolutions(1.5);
+        swissRoll.setNoiseStd(0);
+        swissRoll.setRadius(2);
+        swissRoll.setDepth(1);
+        DoubleMatrix2D data = swissRoll.generate(250);
+        /*
         try (FileWriter writer = new FileWriter("swiss_roll.dat")) {
             writeToCsv(data, writer);
         }
+                */
 
         // Convert into similarity data
         DistanceMeasure distanceMeasure = new EuclideanDistance();
@@ -39,11 +44,13 @@ public class IsomapTest {
         DoubleMatrix2D S = isomap.getMappedRelations();
 
         // Run mapped data through classical mds and project into two dimensions
-        ClassicalMds mds = new ClassicalMds(R, 2);
+        ClassicalMds mds = new ClassicalMds(S, 2);
         DoubleMatrix2D X = mds.getReducedSpace();
+        /*
         try (FileWriter writer = new FileWriter("swiss_roll_isomap.dat")) {
             writeToCsv(X, writer);
         }
+                */
     }
 
     public void writeToCsv(DoubleMatrix2D mat, Writer writer) {

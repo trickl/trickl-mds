@@ -4,7 +4,9 @@ import cern.colt.matrix.DoubleMatrix2D;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jgrapht.Graphs;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
@@ -56,7 +58,7 @@ public class Isomap {
 
             // Sort the nearest neighbours to this point
             TreeMap<Double, Integer> distanceVertexMap = new TreeMap<>();
-            for (int j = i + 1; j < n; ++j) {
+            for (int j = 0; j < n; ++j) {
                 if (i != j) {
                     distanceVertexMap.put(R.get(i, j), j);
                 }
@@ -90,8 +92,8 @@ public class Isomap {
             ClosestFirstIterator<Integer, DefaultWeightedEdge> itr = new ClosestFirstIterator<>(weightedGraph, i, Double.MAX_VALUE);
 
             while (itr.hasNext()) {
-                Integer v = itr.next();
-                S.set(i, v, itr.getShortestPathLength(v));
+                Integer j = itr.next();
+                S.set(i, j, itr.getShortestPathLength(j));
             }
         }
     }
