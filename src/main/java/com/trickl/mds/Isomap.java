@@ -4,9 +4,7 @@ import cern.colt.matrix.DoubleMatrix2D;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jgrapht.Graphs;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
@@ -19,20 +17,23 @@ import org.jgrapht.traverse.ClosestFirstIterator;
 // R is a n x n relational matrix of dissimilarities (assumed to be Euclidean distances)
 // p is the dimensionality of the target space 
 // k is the size of the nearest neighbourhood considered
+// m is the p-norm distance measure for the graph, 1 = Manhattan, 2 = Euclidean
 // X are the projected points
 public class Isomap {
 
     protected static final Logger log = Logger.getLogger(Isomap.class.getCanonicalName());
 
     private final int k;
+    private final int m;
     private final DoubleMatrix2D S;
     private final DoubleMatrix2D R;
 
-    public Isomap(DoubleMatrix2D R, int k) {
+    public Isomap(DoubleMatrix2D R, int k, int m) {
         if (R.rows() != R.columns()) {
             throw new IllegalArgumentException("Relation matrix must be square.");
         }
         this.k = k;
+        this.m = m;
         this.R = R;
         this.S = R.like();
 
@@ -60,7 +61,7 @@ public class Isomap {
             TreeMap<Double, Integer> distanceVertexMap = new TreeMap<>();
             for (int j = 0; j < n; ++j) {
                 if (i != j) {
-                    distanceVertexMap.put(R.get(i, j), j);
+                    distanceVertexMap.put(Math.pow(R.get(i, j), m), j);
                 }
             }
 
@@ -93,7 +94,7 @@ public class Isomap {
 
             while (itr.hasNext()) {
                 Integer j = itr.next();
-                S.set(i, j, itr.getShortestPathLength(j));
+                S.set(i, j, Math.pow(itr.getShortestPathLength(j), 1.0 / m));
             }
         }
     }

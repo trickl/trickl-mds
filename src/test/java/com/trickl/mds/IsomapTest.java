@@ -40,7 +40,7 @@ public class IsomapTest {
         DistanceMeasure distanceMeasure = new EuclideanDistance();
         DoubleMatrix2D R = distanceMeasure.getDistances(data);
 
-        Isomap isomap = new Isomap(R, 5);
+        Isomap isomap = new Isomap(R, 5, 2);
         DoubleMatrix2D S = isomap.getMappedRelations();
 
         // Run mapped data through classical mds and project into two dimensions
