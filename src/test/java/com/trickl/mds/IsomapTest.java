@@ -30,11 +30,11 @@ public class IsomapTest {
         swissRoll.setRadius(2);
         swissRoll.setDepth(1);
         DoubleMatrix2D data = swissRoll.generate(250);
-        /*
+       /* 
         try (FileWriter writer = new FileWriter("swiss_roll.dat")) {
             writeToCsv(data, writer);
         }
-                */
+         */       
 
         // Convert into similarity data
         DistanceMeasure distanceMeasure = new EuclideanDistance();
@@ -50,7 +50,7 @@ public class IsomapTest {
         try (FileWriter writer = new FileWriter("swiss_roll_isomap.dat")) {
             writeToCsv(X, writer);
         }
-                */
+          */      
     }
 
     public void writeToCsv(DoubleMatrix2D mat, Writer writer) {

@@ -1,6 +1,8 @@
 package com.trickl.mds;
 
 import cern.colt.matrix.DoubleMatrix2D;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -9,8 +11,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.util.Pair;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 import org.jgrapht.graph.SimpleWeightedGraph;
 import org.jgrapht.traverse.ClosestFirstIterator;
 
@@ -45,6 +49,11 @@ public class RobustKernelIsomap {
         public void incrementFlow() {
             this.flow += 1;
         }
+        
+        @Override
+        public String toString() {
+            return super.toString() + " [ " + flow + "]"; 
+        }
     }
 
     protected static final Logger log = Logger.getLogger(Isomap.class.getCanonicalName());
@@ -76,9 +85,9 @@ public class RobustKernelIsomap {
 
         int n = R.rows(); // Number of points
 
-        // Create a neighbourhood graph using all the known dissimilarities
-        // Undirected as we assume symmetrical dissimlarities and we need a weight for each edge
-        SimpleWeightedGraph<Integer, FlowEdge> weightedGraph = new SimpleWeightedGraph<>(FlowEdge.class);
+        // Create a neighbourhood graph using all the known dissimilarities        
+        // Directed, as we create both an in flow and out flow for each edge (for robustness)
+        SimpleDirectedWeightedGraph<Integer, FlowEdge> weightedGraph = new SimpleDirectedWeightedGraph<>(FlowEdge.class);
         for (int i = 0; i < n; ++i) {
             weightedGraph.addVertex(i);
         }
@@ -86,25 +95,29 @@ public class RobustKernelIsomap {
         for (int i = 0; i < n; ++i) {
 
             // Sort the nearest neighbours to this point
-            TreeMap<Double, Integer> distanceVertexMap = new TreeMap<>();
+            List<Pair<Integer, Double> > vertexDistanceMap = new ArrayList<>(n - 1);
             for (int j = 0; j < n; ++j) {
-                if (i != j) {
-                    distanceVertexMap.put(Math.pow(R.get(i, j), m), j);
+                if (i != j) {                    
+                    vertexDistanceMap.add(new Pair<>(j, Math.pow(R.get(i, j), m)));
                 }
             }
+            
+            vertexDistanceMap.sort((Pair<Integer, Double> lhs, Pair<Integer, Double> rhs) -> 
+               lhs.getSecond().compareTo(rhs.getSecond())
+            );
 
             int pos = 0; // Add the k nearest neighbours to the graph
-            for (Map.Entry<Double, Integer> itr : distanceVertexMap.entrySet()) {
+            for (Pair<Integer, Double> itr : vertexDistanceMap) {
                 if (pos++ >= k) {
                     break;
                 }
 
-                // Note undirected and no parallel edges, so this allows flow in and out         
-                FlowEdge edge = weightedGraph.addEdge(i, itr.getValue());
+                // Note directed and no parallel edges, so this allows flow in and out
+                FlowEdge edge = weightedGraph.addEdge(i, itr.getKey());
                 if (edge != null) {
-                    weightedGraph.setEdgeWeight(edge, itr.getKey());
+                    weightedGraph.setEdgeWeight(edge, itr.getValue());
                     edge.zeroFlow();
-                }
+                }                      
             }
         }
 
@@ -119,37 +132,33 @@ public class RobustKernelIsomap {
         int maxRobustnessIterations = 3;
         for (int robustnessIteration = 0; isRobust == false && robustnessIteration <= maxRobustnessIterations; ++robustnessIteration) {
 
-            // Create a distance matrix of the shortest path between two nodes
-            // using Dijkstra's shortest paths            
-            for (int i = 0; i < n; ++i) {
-
-                ClosestFirstIterator<Integer, FlowEdge> itr = new ClosestFirstIterator<>(weightedGraph, i, Double.MAX_VALUE);
-
-                while (itr.hasNext()) {
-                    Integer j = itr.next();
-                    S.set(i, j, Math.pow(itr.getShortestPathLength(j), 1.0 / m));
-                    FlowEdge edge = itr.getSpanningTreeEdge(j);
+            // Create a distance and flow map of the shortest path between two nodes
+            weightedGraph.vertexSet().stream().forEach((i) -> {
+                ShortestPaths<Integer, FlowEdge> shortestPaths = new ShortestPaths<>(weightedGraph, i, (edge)-> {
                     edge.incrementFlow();
-                }
-            }
+                });
+                shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
+                    S.set(i, vertexDistance.getKey(), Math.pow(vertexDistance.getValue(), 1.0 / m));
+                });
+            });  
 
             // Calculate the distribution of flow across edges
             SummaryStatistics flowSummaryStatistics = new SummaryStatistics();                        
             weightedGraph.edgeSet().stream().forEach((edge) -> {
-                flowSummaryStatistics.addValue(edge.getFlow());
+               flowSummaryStatistics.addValue(edge.getFlow());                
             });
 
-            double flow_sigma = flowSummaryStatistics.getStandardDeviation();
-            double flow_mean = flowSummaryStatistics.getMean();
-            NormalDistribution normalDistribution = new NormalDistribution(flow_mean, flow_sigma);
+            double flowStd = flowSummaryStatistics.getStandardDeviation();
+            double flowMean = flowSummaryStatistics.getMean();
+            NormalDistribution normalDistribution = new NormalDistribution(flowMean, flowStd);
 
             List<FlowEdge> edgesPendingRemoval = new LinkedList<>();
             weightedGraph.edgeSet().stream().forEach((edge) -> {
                 // This edge has too much flow going through it, check that we don't orphan either vertex by removal
                 double cumulative_density = normalDistribution.cumulativeProbability(edge.getFlow());
                 if (flowIntolerance > 1 - cumulative_density) {
-                    if (weightedGraph.degreeOf(weightedGraph.getEdgeSource(edge)) > 1 && 
-                            weightedGraph.degreeOf(weightedGraph.getEdgeTarget(edge)) > 1) {
+                    if (weightedGraph.outDegreeOf(weightedGraph.getEdgeSource(edge)) > 1 && 
+                            weightedGraph.outDegreeOf(weightedGraph.getEdgeTarget(edge)) > 1) {
                         edgesPendingRemoval.add(edge);
                     }
                 }

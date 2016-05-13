@@ -87,15 +87,11 @@ public class Isomap {
         }
 
         // Create a distance matrix of the shortest path between two nodes
-        // using Dijkstra's shortest paths
-        for (int i = 0; i < n; ++i) {
-
-            ClosestFirstIterator<Integer, DefaultWeightedEdge> itr = new ClosestFirstIterator<>(weightedGraph, i, Double.MAX_VALUE);
-
-            while (itr.hasNext()) {
-                Integer j = itr.next();
-                S.set(i, j, Math.pow(itr.getShortestPathLength(j), 1.0 / m));
-            }
-        }
+        weightedGraph.vertexSet().stream().forEach((i) -> {
+            ShortestPaths<Integer, DefaultWeightedEdge> shortestPaths = new ShortestPaths<>(weightedGraph, i);
+            shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
+                S.set(i, vertexDistance.getKey(), Math.pow(vertexDistance.getValue(), 1.0 / m));
+            });
+        });
     }
 }
