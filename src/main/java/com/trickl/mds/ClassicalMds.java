@@ -5,6 +5,7 @@ import cern.colt.matrix.DoubleFactory2D;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.linalg.SingularValueDecomposition;
+import com.trickl.math.CenteringMatrix;
 import com.trickl.pca.EigenspaceModel;
 
 // Torgerson Classical MDS (1952)
@@ -33,32 +34,9 @@ public class ClassicalMds implements EigenspaceModel {
         // First need to construct double centred distance matrix B of scalar products
         int n = R.rows();
 
-        // Need d^2 matrix where d is a Euclidean distance
-        DoubleMatrix2D D = DoubleFactory2D.dense.make(R.rows(), R.columns());
-        for (int i = 0; i < n; ++i)
-        {
-           for (int j = 0; j < n; ++j)
-           {
-             D.set(i, j,  Math.pow(R.get(i, j), 2.0));
-           }
-        }
-
-        // Double centring, so origin is centroid of all points
-        DoubleMatrix2D J = DoubleFactory2D.dense.make(n, n); // Double centering matrix
-        DoubleMatrix2D I = DoubleFactory2D.dense.identity(n);
-        for (int i = 0; i < n; ++i)
-        {
-           for (int j = 0; j < n; ++j)
-           {
-              J.set(i, j, I.get(i, j) - (1.0 / (double) n));
-           }
-        }
-        
-        DoubleMatrix2D DJ = DoubleFactory2D.dense.make(D.rows(), J.columns());
-        D.zMult(J, DJ);
-        DoubleMatrix2D B = DoubleFactory2D.dense.make(J.rows(), DJ.columns());
-        J.zMult(DJ, B, -0.5, 0, false, false);
-        
+        // Need centered d^2 matrix where d is a Euclidean distance
+        DoubleMatrix2D B = CenteringMatrix.getDoubleCentered(R, value -> value * value);
+               
         // Use svd to find B = ELE'
         svd = new SingularValueDecomposition(B);
 
