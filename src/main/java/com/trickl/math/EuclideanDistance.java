@@ -1,5 +1,6 @@
-package com.trickl.mds;
+package com.trickl.math;
 
+import com.trickl.math.DistanceMeasure;
 import cern.colt.matrix.DoubleFactory2D;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;

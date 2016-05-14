@@ -1,5 +1,6 @@
 package com.trickl.mds;
 
+import com.trickl.graph.ShortestPaths;
 import cern.colt.matrix.DoubleMatrix2D;
 import java.util.List;
 import java.util.Map;

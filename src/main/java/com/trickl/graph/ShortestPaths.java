@@ -1,4 +1,4 @@
-package com.trickl.mds;
+package com.trickl.graph;
 
 import java.util.HashMap;
 import java.util.Map;

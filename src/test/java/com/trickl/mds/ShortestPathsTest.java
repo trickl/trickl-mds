@@ -1,5 +1,6 @@
 package com.trickl.mds;
 
+import com.trickl.graph.ShortestPaths;
 import java.util.HashMap;
 import java.util.Map;
 import org.jgrapht.graph.DefaultWeightedEdge;

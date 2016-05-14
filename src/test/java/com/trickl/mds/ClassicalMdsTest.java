@@ -1,5 +1,6 @@
 package com.trickl.mds;
 
+import com.trickl.math.EuclideanDistance;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.impl.DenseDoubleMatrix1D;

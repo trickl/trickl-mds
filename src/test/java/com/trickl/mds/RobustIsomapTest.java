@@ -1,5 +1,8 @@
 package com.trickl.mds;
 
+import com.trickl.math.EuclideanDistance;
+import com.trickl.math.DistanceMeasure;
+import com.trickl.util.function.IsAbove;
 import cern.colt.matrix.DoubleFactory2D;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
@@ -12,10 +15,11 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.util.StringUtils;
 
-public class RobustKernelIsomapTest {
+public class RobustIsomapTest {
     
     public static DoubleMatrix2D createSimpleSquareGrid() {
         
@@ -54,6 +58,7 @@ public class RobustKernelIsomapTest {
     }
     
     @Test
+    @Ignore
     public void testSimpleSquareGraph() throws IOException {
         DoubleMatrix2D data = createSimpleSquareGrid();
         
@@ -66,7 +71,7 @@ public class RobustKernelIsomapTest {
         DistanceMeasure distanceMeasure = new EuclideanDistance();
         DoubleMatrix2D R = distanceMeasure.getDistances(data);
 
-        RobustKernelIsomap isomap = new RobustKernelIsomap(R, 4, 1, 0.05);
+        RobustIsomap isomap = new RobustIsomap(R, 4, 1, (flows) -> new IsAbove(10));
         DoubleMatrix2D S = isomap.getMappedRelations();
 
         // Run mapped data through classical mds and project into two dimensions
@@ -89,30 +94,36 @@ public class RobustKernelIsomapTest {
         swissRoll.setRandomEngine(new MersenneTwister(123456789));
         swissRoll.setNormal(normal);
         swissRoll.setRevolutions(1.5);
-        swissRoll.setNoiseStd(0.20);
+        swissRoll.setNoiseStd(0.4);
         swissRoll.setRadius(2);
         swissRoll.setDepth(1);
         DoubleMatrix2D data = swissRoll.generate(250);
         
+        // Add an erroneous point connecting the manifold
+        data.viewRow(0).assign(new double[] {-0.8, 0.25, 0.5});
+        
+        /*
         try (FileWriter writer = new FileWriter("swiss_roll_with_noise.dat")) {
             writeToCsv(data, writer);
         }
+        */
                 
         // Convert into similarity data
         DistanceMeasure distanceMeasure = new EuclideanDistance();
         DoubleMatrix2D R = distanceMeasure.getDistances(data);
 
-        RobustKernelIsomap isomap = new RobustKernelIsomap(R, 5, 2, 0.05);
+        RobustIsomap isomap = new RobustIsomap(R, 5, 2, (flows) -> new IsAbove(250));
         DoubleMatrix2D S = isomap.getMappedRelations();
 
         // Run mapped data through classical mds and project into two dimensions
         ClassicalMds mds = new ClassicalMds(S, 2);
         DoubleMatrix2D X = mds.getReducedSpace();
         
+        /*
         try (FileWriter writer = new FileWriter("swiss_roll_rkisomap.dat")) {
             writeToCsv(X, writer);
         }
-                
+          */      
     }
 
     public void writeToCsv(DoubleMatrix2D mat, Writer writer) {
