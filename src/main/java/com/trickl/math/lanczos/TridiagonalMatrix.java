@@ -3,6 +3,7 @@ package com.trickl.math.lanczos;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.util.Pair;
 
@@ -20,8 +21,8 @@ import org.apache.commons.math3.util.Pair;
 public class TridiagonalMatrix {
 
     private final double epsilon = 1e-16;
-    protected double[] alpha;
-    protected double[] beta;
+    protected double[] alpha = new double[0];
+    protected double[] beta = new double[0];
     protected final double error_tol;
     protected double thold;
 
@@ -41,45 +42,49 @@ public class TridiagonalMatrix {
         error_tol = Math.pow(epsilon, 2. / 3.);
     }
 
-    public void add(Pair<Double, Double> a_and_b) {
-        add(a_and_b.getFirst(), a_and_b.getSecond());
+    public double[] getEigenvalues() {
+        return getEigenvalues(true);
     }
 
-    public List<Double> eigenvalues() {
-        return eigenvalues(true);
-    }
-
-    public List<Double> eigenvalues(boolean discard_ghosts) {
+    public double[] getEigenvalues(boolean discard_ghosts) {
         if (!computed) {
             compute();
         }
+        
+        List<Double> eigenvalueList;
         if (discard_ghosts) {
-            return eigval_distinct_noghost;
+            eigenvalueList = eigval_distinct_noghost;
         } else {
-            return eigval_distinct;
+            eigenvalueList =  eigval_distinct;
         }
+        
+        return ArrayUtils.toPrimitive(eigenvalueList.toArray(new Double[eigenvalueList.size()]));
     }
 
-    public List<Double> errors() {
-        return errors(true);
+    public double[] getErrors() {
+        return getErrors(true);
     }
 
-    public List<Double> errors(boolean discard_ghosts) {
+    public double[] getErrors(boolean discard_ghosts) {
         if (!computed) {
             compute();
         }
+        
+        List<Double> errorList;
         if (discard_ghosts) {
-            return err_noghost;
+            errorList = err_noghost;
         } else {
-            return err;
+            errorList = err;
         }
+        
+        return ArrayUtils.toPrimitive(errorList.toArray(new Double[errorList.size()]));
     }
 
-    public List<Integer> multiplicities() {
-        return multiplicities(true);
+    protected List<Integer> getMultiplicities() {
+        return getMultiplicities(true);
     }
 
-    public List<Integer> multiplicities(boolean discard_ghosts) {
+    protected List<Integer> getMultiplicities(boolean discard_ghosts) {
         if (!computed) {
             compute();
         }
@@ -89,8 +94,13 @@ public class TridiagonalMatrix {
             return multiplicty;
         }
     }
+    
+    
+    protected void add(Pair<Double, Double> a_and_b) {
+        add(a_and_b.getFirst(), a_and_b.getSecond());
+    }
 
-    public void add(double a, double b) {
+    protected void add(double a, double b) {
         computed = false;
 
         double[] alphaTmp = alpha;
@@ -119,7 +129,7 @@ public class TridiagonalMatrix {
         }
     }
 
-    public void compute() {
+    protected void compute() {
         err.clear();
         eigval_distinct.clear();
         multiplicty.clear();
@@ -179,8 +189,7 @@ public class TridiagonalMatrix {
     
         int i = 0, t2 = 0;
 
-        for (double eigval : eigval_distinct) {
-            i++;
+        for (double eigval : eigval_distinct) {            
             if (multiplicty.get(i) == 1) { // test of spuriousness for the eigenvalues whose multiplicity is one.
                 for (int j = t2; j < n - 1; j++, t2++) { // since size of reduced matrix is n-1
                     if ((eval_g[j] - eigval) >= multol) {
@@ -195,16 +204,17 @@ public class TridiagonalMatrix {
                     }
                 }
             }
+            i++;
         }
 
         i = 0;
-        for (double eigval : eigval_distinct) {
-            i++;
+        for (double eigval : eigval_distinct) {            
             if (multiplicty.get(i) != 0) {
                 eigval_distinct_noghost.add(eigval);
                 multiplicty_noghost.add(multiplicty.get(i));
                 err_noghost.add(err.get(i));
             }
+            i++;
         }
     }
 }

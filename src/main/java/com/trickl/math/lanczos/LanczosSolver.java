@@ -86,7 +86,6 @@ public class LanczosSolver extends TridiagonalMatrix {
 
     private final Algebra alg = new Algebra();
     private final DoubleMatrix2D matrix;
-    private double[] vecspace;
     private DoubleMatrix1D startvector;
     private DoubleMatrix1D vec2;
     int vec2index; 
@@ -95,6 +94,8 @@ public class LanczosSolver extends TridiagonalMatrix {
 
     public LanczosSolver(DoubleMatrix2D matrix) {
         this.matrix = matrix;
+        this.startvector = matrix.like1D(Math.max(matrix.rows(), matrix.columns()));
+        this.vec2 = matrix.like1D(startvector.size());
         this.vec2index = 0;
     }
 
@@ -108,7 +109,7 @@ public class LanczosSolver extends TridiagonalMatrix {
 
     public DoubleMatrix2D getEigenvectors(int start, int end, double[] evals, Info info, RandomEngine randomEngine, int maxIterations) {
 
-        DoubleMatrix1D vec3 = DoubleFactory1D.dense.make(vecspace); // a temporary vector.
+        DoubleMatrix1D vec3 = startvector.like(startvector.size()); // a temporary vector.
         List<DoubleMatrix1D> eigvectors = new LinkedList<>(); // contains ritz vectors.
         List<List<Double>> Tvectors = new LinkedList<>(); // contains
 
@@ -151,7 +152,7 @@ public class LanczosSolver extends TridiagonalMatrix {
                 ma = 0;
             } // calculation of ma ends.
 
-            eigvectors.add(DoubleFactory1D.dense.make(vecspace));
+            eigvectors.add(DoubleFactory1D.dense.make(startvector.size()));
             // new ritz vector is being added in eigvectors.
 
             List<Double> Tvector = new LinkedList<>();
@@ -271,7 +272,7 @@ public class LanczosSolver extends TridiagonalMatrix {
 
         // copying to the output iterator & residuum calculation starts:    
         int i = 0;
-        DoubleMatrix2D eigenvectors = DoubleFactory2D.dense.make(vecspace, end - start);
+        DoubleMatrix2D eigenvectors = DoubleFactory2D.dense.make(startvector.size(), end - start);
         
         for (eigenvectors_itr = start;
                 eigenvectors_itr != end; eigenvectors_itr++) {
@@ -330,7 +331,7 @@ public class LanczosSolver extends TridiagonalMatrix {
     }
 
     private void generateTMatrix(LanczosIteration iter, RandomEngine randomEngine) {
-        DoubleMatrix1D vec3 = DoubleFactory1D.dense.make(vecspace);
+
         if (alpha.length == 0) {
             Pair<Double, Double> ab = makeFirstStep(randomEngine);
             add(ab);
@@ -340,7 +341,7 @@ public class LanczosSolver extends TridiagonalMatrix {
     }
 
     private void generateTMatrix(LanczosIteration iter) {
-        DoubleMatrix1D vec3 = DoubleFactory1D.dense.make(vecspace);
+        DoubleMatrix1D vec3 = startvector.like(startvector.size());
         for (int j = 0; j < vec2index; j++) {
             iter.next();
         }
@@ -361,6 +362,7 @@ public class LanczosSolver extends TridiagonalMatrix {
 
     private Pair<Double, Double> makeFirstStep(RandomEngine randomEngine) {
         double a, b;
+        
         startvector.assign(value -> randomEngine.nextDouble());
         double startvectorMag = alg.norm2(startvector);
         startvector.assign(value -> value / startvectorMag);

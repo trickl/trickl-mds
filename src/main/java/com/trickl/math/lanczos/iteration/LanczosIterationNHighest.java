@@ -25,13 +25,13 @@ public class LanczosIterationNHighest extends LanczosIterationBase {
     @Override
     public boolean isConverged(TridiagonalMatrix matrix) {
         if(getIteration() > 1) {
-            List<Double> errors = matrix.errors();
-            List<Double> eigenvalues = matrix.eigenvalues();  
-        if(eigenvalues.size() < n)
+            double[] errors = matrix.getErrors();
+            double[] eigenvalues = matrix.getEigenvalues();  
+        if(eigenvalues.length < n)
           return false;
         else { 
           for(int i = 0; i < n; i++)
-            if (errors.get(errors.size() - i - 1) > Math.max(getAbsoluteTolerance(), getRelativeTolerance() * Math.abs(eigenvalues.get(eigenvalues.size() - i - 1))))
+            if (errors[errors.length - i - 1] > Math.max(getAbsoluteTolerance(), getRelativeTolerance() * Math.abs(eigenvalues[eigenvalues.length - i - 1])))
 	          return false;
 	      return true;
 	    }
