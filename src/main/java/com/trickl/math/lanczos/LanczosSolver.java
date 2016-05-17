@@ -1,13 +1,11 @@
 package com.trickl.math.lanczos;
 
-import com.trickl.math.lanczos.TridiagonalMatrix;
 import cern.colt.matrix.DoubleFactory1D;
 import cern.colt.matrix.DoubleFactory2D;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.linalg.Algebra;
 import cern.jet.math.PlusMult;
-import cern.jet.random.engine.RandomEngine;
 import com.trickl.math.Bounds;
 import com.trickl.math.lanczos.iteration.LanczosIteration;
 import com.trickl.math.lanczos.iteration.LanczosIterationFixed;
@@ -15,6 +13,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.commons.math3.linear.EigenDecomposition;
+import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.util.Pair;
 
 /*
@@ -93,21 +92,22 @@ public class LanczosSolver extends TridiagonalMatrix {
     List<Integer> Ma = new LinkedList<>();
 
     public LanczosSolver(DoubleMatrix2D matrix) {
+        if (matrix.rows() != matrix.columns()) throw new IllegalArgumentException("Matrix must be real, symmetric.");
         this.matrix = matrix;
-        this.startvector = matrix.like1D(Math.max(matrix.rows(), matrix.columns()));
+        this.startvector = matrix.like1D(matrix.rows());
         this.vec2 = matrix.like1D(startvector.size());
         this.vec2index = 0;
     }
 
-    public void calculateEigenvalues(LanczosIteration iter, RandomEngine randomEngine) {
-        generateTMatrix(iter, randomEngine);
+    public void calculateEigenvalues(LanczosIteration iter, RandomGenerator randomGenerator) {
+        generateTMatrix(iter, randomGenerator);
     }
 
     public void getMoreEigenvalues(LanczosIteration iter) {
         generateTMatrix(iter);
     }
 
-    public DoubleMatrix2D getEigenvectors(int start, int end, double[] evals, Info info, RandomEngine randomEngine, int maxIterations) {
+    public DoubleMatrix2D getEigenvectors(int start, int end, double[] evals, Info info, RandomGenerator randomGenerator, int maxIterations) {
 
         DoubleMatrix1D vec3 = startvector.like(startvector.size()); // a temporary vector.
         List<DoubleMatrix1D> eigvectors = new LinkedList<>(); // contains ritz vectors.
@@ -231,7 +231,7 @@ public class LanczosSolver extends TridiagonalMatrix {
         int eigenvectors_itr;
         int Tvectors_itr;
 
-        a_and_b = makeFirstStep(randomEngine);
+        a_and_b = makeFirstStep(randomGenerator);
         if (a_and_b.getFirst() != alpha[0] || a_and_b.getSecond() != beta[0]) {
             throw new RuntimeException("T-matrix problem at first step");
         }
@@ -330,10 +330,10 @@ public class LanczosSolver extends TridiagonalMatrix {
         }
     }
 
-    private void generateTMatrix(LanczosIteration iter, RandomEngine randomEngine) {
+    private void generateTMatrix(LanczosIteration iter, RandomGenerator randomGenerator) {
 
         if (alpha.length == 0) {
-            Pair<Double, Double> ab = makeFirstStep(randomEngine);
+            Pair<Double, Double> ab = makeFirstStep(randomGenerator);
             add(ab);
             vec2index = 1;
         }
@@ -360,10 +360,10 @@ public class LanczosSolver extends TridiagonalMatrix {
         }
     }
 
-    private Pair<Double, Double> makeFirstStep(RandomEngine randomEngine) {
+    private Pair<Double, Double> makeFirstStep(RandomGenerator randomGenerator) {
         double a, b;
         
-        startvector.assign(value -> randomEngine.nextDouble());
+        startvector.assign(value -> randomGenerator.nextInt() & (-1L >>> 32));
         double startvectorMag = alg.norm2(startvector);
         startvector.assign(value -> value / startvectorMag);
         matrix.zMult(startvector, vec2);
