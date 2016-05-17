@@ -5,6 +5,7 @@ import cern.colt.matrix.DoubleFactory2D;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.linalg.Algebra;
+import cern.jet.math.Mult;
 import cern.jet.math.PlusMult;
 import com.trickl.math.Bounds;
 import com.trickl.math.lanczos.iteration.LanczosIteration;
@@ -282,7 +283,7 @@ public class LanczosSolver extends TridiagonalMatrix {
             vec3.assign(eigvector, PlusMult.minusMult(eigenval_a.get(i)));
 
             // now vec3 is (A*v - eigenval_a*v); *eigenvectors_itr) is being added in vec3.
-            residuum.add(alg.norm2(vec3));
+            residuum.add(norm2(vec3));
             i++;
         } // copying to the output iterator ends.    
         
@@ -364,13 +365,13 @@ public class LanczosSolver extends TridiagonalMatrix {
         double a, b;
         
         startvector.assign(value -> randomGenerator.nextInt() & (-1L >>> 32));
-        double startvectorMag = alg.norm2(startvector);
-        startvector.assign(value -> value / startvectorMag);
+        double startvectorMag = norm2(startvector);
+        startvector.assign(Mult.div(startvectorMag));
         matrix.zMult(startvector, vec2);
         a = startvector.zDotProduct(vec2);
-        vec2.assign(startvector, PlusMult.minusDiv(a));
-        b = alg.norm2(vec2);
-        vec2.assign(value -> value / b);
+        vec2.assign(startvector, PlusMult.minusMult(a));
+        b = norm2(vec2);
+        vec2.assign(Mult.div(b));
         return new Pair(a, b);
     }
 
@@ -378,13 +379,18 @@ public class LanczosSolver extends TridiagonalMatrix {
 
         matrix.zMult(vec2, vec3);
         double a = vec2.zDotProduct(vec3);
-        vec3.assign(vec2, PlusMult.minusDiv(a));
-        vec3.assign(startvector, PlusMult.minusDiv(beta[j - 1]));
-        double b = alg.norm2(vec3);
-        vec3.assign(value -> value / b);
+        vec3.assign(vec2, PlusMult.minusMult(a));
+        vec3.assign(startvector, PlusMult.minusMult(beta[j - 1]));
+        double b = norm2(vec3);
+        vec3.assign(Mult.div(b));
         startvector = vec2;
         vec2 = vec3;
 
         return new Pair(a, b);
+    }
+    
+    private double norm2(DoubleMatrix1D vec) {
+        // The Colt norm is erroneous, it fails to apply the root per definition
+        return Math.sqrt(alg.norm2(vec));
     }
 }
