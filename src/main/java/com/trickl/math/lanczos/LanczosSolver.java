@@ -88,6 +88,7 @@ public class LanczosSolver extends TridiagonalMatrix {
     private final DoubleMatrix2D matrix;
     private DoubleMatrix1D startvector;
     private DoubleMatrix1D vec2;
+    private DoubleMatrix1D vec3;
     int vec2index; 
     int[] M1, M2;
     List<Integer> Ma = new LinkedList<>();
@@ -97,6 +98,7 @@ public class LanczosSolver extends TridiagonalMatrix {
         this.matrix = matrix;
         this.startvector = matrix.like1D(matrix.rows());
         this.vec2 = matrix.like1D(startvector.size());
+        this.vec3 = matrix.like1D(startvector.size());
         this.vec2index = 0;
     }
 
@@ -110,7 +112,6 @@ public class LanczosSolver extends TridiagonalMatrix {
 
     public DoubleMatrix2D getEigenvectors(int start, int end, double[] evals, Info info, RandomGenerator randomGenerator, int maxIterations) {
 
-        DoubleMatrix1D vec3 = startvector.like(startvector.size()); // a temporary vector.
         List<DoubleMatrix1D> eigvectors = new LinkedList<>(); // contains ritz vectors.
         List<List<Double>> Tvectors = new LinkedList<>(); // contains
 
@@ -251,7 +252,7 @@ public class LanczosSolver extends TridiagonalMatrix {
         }
         vec2index = 2;
         for (int j = 2; j < maMax; j++) {
-            a_and_b = makeStep(j - 1, vec3);
+            a_and_b = makeStep(j - 1);
             if (a_and_b.getFirst() != alpha[j - 1] || a_and_b.getSecond() != beta[j - 1]) {
                 throw new RuntimeException("T-matrix problem");
             }
@@ -342,7 +343,6 @@ public class LanczosSolver extends TridiagonalMatrix {
     }
 
     private void generateTMatrix(LanczosIteration iter) {
-        DoubleMatrix1D vec3 = startvector.like(startvector.size());
         for (int j = 0; j < vec2index; j++) {
             iter.next();
         }
@@ -351,7 +351,7 @@ public class LanczosSolver extends TridiagonalMatrix {
         }
 
         while (!iter.isFinished(this)) {
-            Pair<Double, Double> ab = makeStep(vec2index, vec3);
+            Pair<Double, Double> ab = makeStep(vec2index);
 
             if (vec2index == alpha.length) {
                 add(ab);
@@ -375,7 +375,7 @@ public class LanczosSolver extends TridiagonalMatrix {
         return new Pair(a, b);
     }
 
-    private Pair<Double, Double> makeStep(int j, DoubleMatrix1D vec3) {
+    private Pair<Double, Double> makeStep(int j) {
 
         matrix.zMult(vec2, vec3);
         double a = vec2.zDotProduct(vec3);
@@ -383,8 +383,10 @@ public class LanczosSolver extends TridiagonalMatrix {
         vec3.assign(startvector, PlusMult.minusMult(beta[j - 1]));
         double b = norm2(vec3);
         vec3.assign(Mult.div(b));
+        DoubleMatrix1D tmp = startvector;
         startvector = vec2;
         vec2 = vec3;
+        vec3 = tmp;
 
         return new Pair(a, b);
     }

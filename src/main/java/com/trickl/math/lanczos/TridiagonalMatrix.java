@@ -156,7 +156,7 @@ public class TridiagonalMatrix {
 
         for (int i = 1; i < n; i++) {
             double[] eigenvector = eigenDecomposition.getEigenvector(i - 1).toArray();
-            if ((eval[i] - temp) > thold) {
+            if (Math.abs(eval[i] - temp) > thold) {
                 eigval_distinct.add(eval[i]);
                 temp = eval[i];
                 multiplicty.add(multiple);
@@ -192,7 +192,7 @@ public class TridiagonalMatrix {
         for (double eigval : eigval_distinct) {            
             if (multiplicty.get(i) == 1) { // test of spuriousness for the eigenvalues whose multiplicity is one.
                 for (int j = t2; j < n - 1; j++, t2++) { // since size of reduced matrix is n-1
-                    if ((eval_g[j] - eigval) >= multol) {
+                    if (-(eval_g[j] - eigval) >= multol) {
                         break;
                     }
 
