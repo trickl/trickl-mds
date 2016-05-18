@@ -68,6 +68,26 @@ public class LanczosSolverTest {
     
     // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
     @Test
+    public void testDense2x2EigenvectorsCase2() {
+        
+        // Chosen for simplicity, has eigenvalues 1 and 5
+        double[][] data = new double[][] {
+        {2, 1},
+        {1, 2},        
+        };
+        
+        DoubleMatrix2D eigenvectors = getEigenvectors(DoubleFactory2D.dense.make(data));
+        
+        double[][] expectedEigenvectors = new double[][] {
+        {Math.sqrt(2)/2, Math.sqrt(2)/2},
+        {-Math.sqrt(2)/2, Math.sqrt(2)/2},        
+        };
+        
+        MatrixAssert.assertEquals(DoubleFactory2D.dense.make(expectedEigenvectors), eigenvectors, 1e-4);
+    } 
+    
+    // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
+    @Test
     public void testDense3x3EigenvaluesCase1() {
         
         // Chosen for simplicity, has eigenvalues 11, 2, 1
@@ -81,6 +101,28 @@ public class LanczosSolverTest {
         // Check converged to correct eigenvalues
         Assert.assertArrayEquals("Eigenvalues not as expected", new double[] {1, 2, 11}, eigenvalues, 1e-4);
     }   
+    
+    // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
+    @Test
+    public void testDense3x3igenvectorsCase1() {
+        
+        // Chosen for simplicity, has eigenvalues 1 and 5
+        double[][] data = new double[][] {
+        {2, 0, 0},
+        {0, 3, 4},        
+        {0, 4, 9},        
+        };
+        
+        DoubleMatrix2D eigenvectors = getEigenvectors(DoubleFactory2D.dense.make(data));
+        
+        double[][] expectedEigenvectors = new double[][] {
+        {0,                 -1,      0},
+        {2 / Math.sqrt(5),  0,      1 / Math.sqrt(5)},        
+        {-1 / Math.sqrt(5), 0,      2 / Math.sqrt(5)},       
+        };
+        
+        MatrixAssert.assertEquals(DoubleFactory2D.dense.make(expectedEigenvectors), eigenvectors, 1e-4);
+    } 
     
     // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
     @Test
