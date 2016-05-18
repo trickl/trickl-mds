@@ -21,7 +21,7 @@ public class LanczosSolverTest {
         {2, 3},        
         };
         
-        double[] eigenvalues = getEigenvalues(data);
+        double[] eigenvalues = getEigenvalues(DoubleFactory2D.dense.make(data));
         // Check converged to correct eigenvalues
         Assert.assertArrayEquals("Eigenvalues not as expected", new double[] {5, 1}, eigenvalues, 1e-4);
     }    
@@ -30,13 +30,13 @@ public class LanczosSolverTest {
     @Test
     public void testDense2x2MEigenvaluesCase2() {
         
-        // Chosen for simplicity, has eigenvalues 1 and 5
+        // Chosen for simplicity, has eigenvalues 1 and 3
         double[][] data = new double[][] {
         {2, 1},
         {1, 2},        
         };
         
-        double[] eigenvalues = getEigenvalues(data);
+        double[] eigenvalues = getEigenvalues(DoubleFactory2D.dense.make(data));
         // Check converged to correct eigenvalues
         Assert.assertArrayEquals("Eigenvalues not as expected", new double[] {3, 1}, eigenvalues, 1e-4);
     }   
@@ -45,20 +45,36 @@ public class LanczosSolverTest {
     @Test
     public void testDense3x3EigenvaluesCase1() {
         
-        // Chosen for simplicity, has eigenvalues 1 and 5
+        // Chosen for simplicity, has eigenvalues 11, 2, 1
         double[][] data = new double[][] {
         {2, 0, 0},
         {0, 3, 4},        
         {0, 4, 9},        
         };
         
-        double[] eigenvalues = getEigenvalues(data);
+        double[] eigenvalues = getEigenvalues(DoubleFactory2D.dense.make(data));
         // Check converged to correct eigenvalues
         Assert.assertArrayEquals("Eigenvalues not as expected", new double[] {11, 2, 1}, eigenvalues, 1e-4);
     }   
     
-    private static double[] getEigenvalues(double[][] data) {
-        DoubleMatrix2D mat= DoubleFactory2D.dense.make(data);
+    // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
+    @Test
+    public void testSparse3x3EigenvaluesCase1() {
+        
+        // Chosen for simplicity, has eigenvalues 1 and 5
+        DoubleMatrix2D matrix = DoubleFactory2D.sparse.make(3, 3);
+        matrix.set(0, 0, 2);
+        matrix.set(1, 1, 3);
+        matrix.set(2, 2, 9);
+        matrix.set(1, 2, 4);
+        matrix.set(2, 1, 4);
+                
+        double[] eigenvalues = getEigenvalues(matrix);
+        // Check converged to correct eigenvalues
+        Assert.assertArrayEquals("Eigenvalues not as expected", new double[] {11, 2, 1}, eigenvalues, 1e-4);
+    }   
+    
+    private static double[] getEigenvalues(DoubleMatrix2D mat) {
         
         LanczosIteration iter = new LanczosIterationFixed(20);
         RandomGenerator randomGenerator = new MersenneTwister(123456789);
