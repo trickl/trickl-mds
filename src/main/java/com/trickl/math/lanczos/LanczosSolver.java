@@ -7,7 +7,7 @@ import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.linalg.Algebra;
 import cern.jet.math.Mult;
 import cern.jet.math.PlusMult;
-import com.trickl.math.Bounds;
+import com.trickl.math.Sorting;
 import com.trickl.math.lanczos.iteration.LanczosIteration;
 import com.trickl.math.lanczos.iteration.LanczosIterationFixed;
 import java.util.Arrays;
@@ -109,14 +109,20 @@ public class LanczosSolver extends TridiagonalMatrix {
     public void getMoreEigenvalues(LanczosIteration iter) {
         generateTMatrix(iter);
     }
+    
+    public DoubleMatrix2D getEigenvectors(double[] eigenvalues, RandomGenerator randomGenerator, int maxIterations) {
+        return getEigenvectorsWithInfo(eigenvalues, randomGenerator, maxIterations).getFirst();
+    }
 
-    public DoubleMatrix2D getEigenvectors(int start, int end, double[] evals, Info info, RandomGenerator randomGenerator, int maxIterations) {
+    public Pair<DoubleMatrix2D, Info>  getEigenvectorsWithInfo(double[] eigenvalues, RandomGenerator randomGenerator, int maxIterations) {
 
         List<DoubleMatrix1D> eigvectors = new LinkedList<>(); // contains ritz vectors.
         List<List<Double>> Tvectors = new LinkedList<>(); // contains
-
-                                             // eigenvectors of T matrix.
+                                             
         // calculation of eigen vectors of T matrix(consists of alphas & betas):    
+        int start = 0;        
+        int end = eigenvalues.length;
+        
         int n1 = alpha.length;
         double mamax, error, lambda;
         Pair<Double, Double> a_and_b;
@@ -126,11 +132,11 @@ public class LanczosSolver extends TridiagonalMatrix {
         List<Double> residuum = new LinkedList<>();
         List<ErrorInfo> status = new LinkedList<>();
 
-        findM1M2(start, end, evals);
+        findM1M2(eigenvalues);
         int M1_itr = 0;
         int M2_itr = 0;
 
-        while (start != end) {
+        for (int pos = start; pos < end ; ++pos) {
 
             int maxcount = 10;
             lambda = 0;
@@ -167,7 +173,8 @@ public class LanczosSolver extends TridiagonalMatrix {
 
             if (ma != 0) {
 
-                double[] eval, z;
+                double[] eval;
+                double[] nthEigenvector = null;
                 do {
                     if (ma > alpha.length) { // size of T matrix is to be increased.
                         LanczosIteration iter = new LanczosIterationFixed(ma);
@@ -178,18 +185,19 @@ public class LanczosSolver extends TridiagonalMatrix {
                     count++;
 
                     // on return, z contains all orthonormal eigen vectors of T matrix.
-                    EigenDecomposition eigenDecomposition = new EigenDecomposition(alpha, beta);
+                    EigenDecomposition eigenDecomposition = new EigenDecomposition(
+                            Arrays.copyOfRange(alpha, 0, ma), 
+                            Arrays.copyOfRange(beta, 0, ma));
                     eval = eigenDecomposition.getRealEigenvalues();
+                    Arrays.sort(eval); // Consistent with IETL
                     
                     // search for the value of nth starts, where nth is the nth eigen vector in z.            
                     for (nth = ma - 1; nth >= 0; nth--) {
-                        if (Math.abs(eval[nth] - evals[start]) <= thold) {
+                        if (Math.abs(eval[nth] - eigenvalues[pos]) <= thold) {
                             break;
                         }
-                    }
+                    }     
                     
-                    z = eigenDecomposition.getEigenvector(nth).toArray();
-
                     // search for the value of ith ends, where ith is the ith eigen vector in z.            
                     if (nth == -1) {
                         error = 0;
@@ -197,7 +205,8 @@ public class LanczosSolver extends TridiagonalMatrix {
                         eigvectors.get(eigvectors.size() - 1).assign(0);
                         errInf = ErrorInfo.NO_EIGENVALUE;
                     } else {
-                        error = Math.abs(beta[ma - 1] * z[ma - 1]); // beta[ma - 1] = betaMplusOne.
+                        nthEigenvector = eigenDecomposition.getEigenvector(ma - 1 - nth).toArray();
+                        error = Math.abs(beta[ma - 1] * nthEigenvector[ma - 1]); // beta[ma - 1] = betaMplusOne.
                         if (error > error_tol) {
                             ma += deltam;
                         }
@@ -209,21 +218,20 @@ public class LanczosSolver extends TridiagonalMatrix {
                     errInf = ErrorInfo.NOT_CALCULATED;
                 } else { // if error is small enough.
                     if (ma != 0) {
-                        for (int i = 0; i < ma; i++) {
-                            (Tvectors.get(Tvectors.size() - 1)).add(z[i]);
+                        for (int i = 0; i < ma; i++) {                            
+                            (Tvectors.get(Tvectors.size() - 1)).add(nthEigenvector[i]);
                         }
                         if (ma > maMax) {
                             maMax = ma;
                         }
                         lambda = eval[nth];
-                    } // end of if(ma != 0), inner.
-                } // end of else{//if error is small enough.
-            } // end of if(ma != 0).
+                    } 
+                } 
+            } 
 
             eigenval_a.add(lambda); // for Info object.
             Ma.add(ma); // for Info object.
             status.add(errInf);
-            start++;
             M1_itr++;
             M2_itr++;
         } // end of while(in_eigvals_start !=  in_eigvals_end)
@@ -268,8 +276,8 @@ public class LanczosSolver extends TridiagonalMatrix {
                 // vec2 is being added in one vector of eigvectors.
                 eigenvectors_itr++;
                 Tvectors_itr++;
-            } // end of while loop.      
-        } // end of for(int j = 2; j < maMax; j++).
+            }     
+        }
         // end of basis transformation.  // end of basis transformation.  
 
         // copying to the output iterator & residuum calculation starts:    
@@ -288,34 +296,35 @@ public class LanczosSolver extends TridiagonalMatrix {
             i++;
         } // copying to the output iterator ends.    
         
-        info = new Info(M1, M2, Ma, eigenval_a, residuum, status);
-        return eigenvectors;
+        Info info = new Info(M1, M2, Ma, eigenval_a, residuum, status);
+        return new Pair<>(eigenvectors, info);
     }
 
-    private void findM1M2(int start, int end, double[] eigenvalues) {
+    private void findM1M2(double[] eigenvalues) {
 
         int m2counter = 0;
         int n = 1;
-        int pos = start;
-        M1 = new int[end - start];
+        int pos = 0;
+        M1 = new int[eigenvalues.length];
         Arrays.fill(M1, 0);
-        M2 = new int[end - start];
+        M2 = new int[eigenvalues.length];
         Arrays.fill(M2, 0);
 
-        while (m2counter < (end - start) && (n < alpha.length)) {
+        while (m2counter < (eigenvalues.length) && (n < alpha.length)) {
             n++; // n++ == 2, at first time in this loop.
 
             EigenDecomposition eigenDecomposition = new EigenDecomposition(alpha, beta);
             double[] eval = eigenDecomposition.getRealEigenvalues();
+            Arrays.sort(eval); // Consistent with IETL
 
             int M1_itr = 0;
             int M2_itr = 0;
 
-            while (pos != end) {
+            while (pos != eigenvalues.length) {
                 if (M1[M1_itr] == 0 || M2[M2_itr] == 0) {
                     double eigenvalue = eigenvalues[pos];
-                    int ub = Bounds.Lower(0, eval.length, index -> eval[index] < eigenvalue + thold);
-                    int lb = Bounds.Upper(0, eval.length, index -> eval[index] > eigenvalue - thold);
+                    int ub = Sorting.LowerBound(eval, eigenvalue + thold);
+                    int lb = Sorting.UpperBound(eval, eigenvalue - thold);
 
                     if (M1[M1_itr] == 0 && ub - lb >= 1) {
                         M1[M1_itr] = n;

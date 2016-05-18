@@ -142,6 +142,7 @@ public class TridiagonalMatrix {
         int n = alpha.length;
         EigenDecomposition eigenDecomposition = new EigenDecomposition(alpha, beta);
         double[] eval = eigenDecomposition.getRealEigenvalues();
+        Arrays.sort(eval); // Consistent with IETL
     
         // tolerance values:
         multol = Math.max(alpha_max, beta_max) * 2 * epsilon * (1000 + n);
@@ -155,7 +156,7 @@ public class TridiagonalMatrix {
         int multiple = 1;
 
         for (int i = 1; i < n; i++) {
-            double[] eigenvector = eigenDecomposition.getEigenvector(i - 1).toArray();
+            double[] eigenvector = eigenDecomposition.getEigenvector(eval.length - i).toArray();
             if (Math.abs(eval[i] - temp) > thold) {
                 eigval_distinct.add(eval[i]);
                 temp = eval[i];
@@ -176,7 +177,7 @@ public class TridiagonalMatrix {
         if (multiple > 1) {
             err.add(.0);
         } else {
-            double[] eigenvector = eigenDecomposition.getEigenvector(n - 1).toArray();
+            double[] eigenvector = eigenDecomposition.getEigenvector(eval.length - n).toArray();
             err.add(Math.abs(beta[beta.length - 1] * eigenvector[n - 1])); // *beta.rbegin() = betaMplusOne.
         }
         // the unique eigen values selection, their multiplicities and corresponding errors calculation ends.
@@ -186,13 +187,14 @@ public class TridiagonalMatrix {
 
         eigenDecomposition = new EigenDecomposition(alpha_g, beta_g);
         double[] eval_g = eigenDecomposition.getRealEigenvalues();
+        Arrays.sort(eval_g); // Consistent with IETL
     
         int i = 0, t2 = 0;
 
         for (double eigval : eigval_distinct) {            
             if (multiplicty.get(i) == 1) { // test of spuriousness for the eigenvalues whose multiplicity is one.
                 for (int j = t2; j < n - 1; j++, t2++) { // since size of reduced matrix is n-1
-                    if (-(eval_g[j] - eigval) >= multol) {
+                    if (eval_g[j] - eigval >= multol) {
                         break;
                     }
 
