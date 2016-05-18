@@ -123,7 +123,7 @@ public class LanczosSolverTest {
         
         MatrixAssert.assertEquals(DoubleFactory2D.dense.make(expectedEigenvectors), eigenvectors, 1e-4);
     } 
-    
+           
     // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
     @Test
     public void testSparse3x3EigenvaluesCase1() {
@@ -140,6 +140,29 @@ public class LanczosSolverTest {
         // Check converged to correct eigenvalues
         Assert.assertArrayEquals("Eigenvalues not as expected", new double[] {1, 2, 11}, eigenvalues, 1e-4);
     }   
+    
+    // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
+    @Test
+    public void testSparse3x3igenvectorsCase1() {
+        
+        // Chosen for simplicity, has eigenvalues 1 and 5
+        DoubleMatrix2D matrix = DoubleFactory2D.sparse.make(3, 3);
+        matrix.set(0, 0, 2);
+        matrix.set(1, 1, 3);
+        matrix.set(2, 2, 9);
+        matrix.set(1, 2, 4);
+        matrix.set(2, 1, 4);
+        
+        DoubleMatrix2D eigenvectors = getEigenvectors(matrix);
+        
+        double[][] expectedEigenvectors = new double[][] {
+        {0,                 -1,      0},
+        {2 / Math.sqrt(5),  0,      1 / Math.sqrt(5)},        
+        {-1 / Math.sqrt(5), 0,      2 / Math.sqrt(5)},       
+        };
+        
+        MatrixAssert.assertEquals(DoubleFactory2D.dense.make(expectedEigenvectors), eigenvectors, 1e-4);
+    } 
     
     private static double[] getEigenvalues(DoubleMatrix2D mat) {
         
