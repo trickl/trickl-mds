@@ -63,12 +63,14 @@ public class RobustIsomap extends Isomap {
 
             // Create a distance and flow map of the shortest path between two nodes
             weightedGraph.vertexSet().stream().forEach((i) -> {
-                ShortestPaths<Integer, FlowEdge> shortestPaths = new ShortestPaths<>(weightedGraph, i, (com.trickl.graph.FlowEdge edge) -> {
-                    edge.incrementFlow();
-                });
-                shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
-                    S.set(i, vertexDistance.getKey(), Math.pow(vertexDistance.getValue(), 1.0 / m));
-                });
+                if (samplePredicate.test(i)) {
+                    ShortestPaths<Integer, FlowEdge> shortestPaths = new ShortestPaths<>(weightedGraph, i, (com.trickl.graph.FlowEdge edge) -> {
+                        edge.incrementFlow();
+                    });
+                    shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
+                        S.set(i, vertexDistance.getKey(), Math.pow(vertexDistance.getValue(), 1.0 / m));
+                    });
+                }
             });
 
             // Summarise the edge flows

@@ -53,8 +53,8 @@ public class IsomapTest {
         try (FileWriter writer = new FileWriter("swiss_roll_isomap.dat")) {
             writeToCsv(X, writer);
         }
-          */      
-    }
+          */       
+   }
 
     public void writeToCsv(DoubleMatrix2D mat, Writer writer) {
         try (PrintWriter printWriter = new PrintWriter(writer)) {
