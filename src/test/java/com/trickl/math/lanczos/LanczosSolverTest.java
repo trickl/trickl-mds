@@ -143,7 +143,7 @@ public class LanczosSolverTest {
     
     // See https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors#Eigenvalues_and_the_characteristic_polynomial
     @Test
-    public void testSparse3x3igenvectorsCase1() {
+    public void testSparse3x3EigenvectorsCase1() {
         
         // Chosen for simplicity, has eigenvalues 1 and 5
         DoubleMatrix2D matrix = DoubleFactory2D.sparse.make(3, 3);

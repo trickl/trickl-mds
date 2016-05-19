@@ -71,7 +71,8 @@ public class RobustIsomapTest {
         DistanceMeasure distanceMeasure = new EuclideanDistance();
         DoubleMatrix2D R = distanceMeasure.getDistances(data);
 
-        RobustIsomap isomap = new RobustIsomap(R, 4, 1, (flows) -> new IsAbove(10));
+        DoubleMatrix2D Rk = RobustIsomap.kNearest(R, 4);
+        RobustIsomap isomap = new RobustIsomap(Rk, 1, (flows) -> new IsAbove(10));
         DoubleMatrix2D S = isomap.getMappedRelations();
 
         // Run mapped data through classical mds and project into two dimensions
@@ -112,7 +113,8 @@ public class RobustIsomapTest {
         DistanceMeasure distanceMeasure = new EuclideanDistance();
         DoubleMatrix2D R = distanceMeasure.getDistances(data);
 
-        RobustIsomap isomap = new RobustIsomap(R, 5, 2, (flows) -> new IsAbove(250));
+        DoubleMatrix2D Rk = RobustIsomap.kNearest(R, 5);
+        RobustIsomap isomap = new RobustIsomap(Rk, 2, (flows) -> new IsAbove(250));
         DoubleMatrix2D S = isomap.getMappedRelations();
 
         // Run mapped data through classical mds and project into two dimensions

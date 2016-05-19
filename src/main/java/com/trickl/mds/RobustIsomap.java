@@ -12,7 +12,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.math3.util.Pair;
 import org.jgrapht.alg.ConnectivityInspector;
+import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleDirectedWeightedGraph;
+import org.jgrapht.graph.SimpleWeightedGraph;
 
 // Based on the edge flow idea that allows removing critical outliers for robustness
 // Note this implementation does not implement the Kernel feature.
@@ -32,32 +34,17 @@ import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 // X are the projected points
 // m is the p-norm distance measure for the graph, 1 = Manhattan, 2 = Euclidean
 // flow_interolance prevents too much flow going through a single node, the lower the intolerance, the more likely for short-circuits
-public class RobustIsomap {
+public class RobustIsomap extends Isomap {
 
-    protected static final Logger log = Logger.getLogger(Isomap.class.getCanonicalName());
-
-    private final int k;
-    private final int m;
     private final Function<int[], IntPredicate> outlierPredicateFunction;
-    private final DoubleMatrix2D S;
-    private final DoubleMatrix2D R;
 
-    // TODO: Generalise the methodology for detecting outliers
-    public RobustIsomap(DoubleMatrix2D R, int k, int m, Function<int[], IntPredicate> outlierPredicateFunction) {
-        if (R.rows() != R.columns()) {
-            throw new IllegalArgumentException("Relation matrix must be square.");
-        }
-        this.k = k;
-        this.m = m;
-        this.outlierPredicateFunction = outlierPredicateFunction;
-        this.R = R;
-        this.S = R.like();
-
-        solve();
+    public RobustIsomap(DoubleMatrix2D R, int m, Function<int[], IntPredicate> outlierPredicateFunction) {
+        this(R, m, outlierPredicateFunction, index -> true);
     }
-
-    public DoubleMatrix2D getMappedRelations() {
-        return S;
+    
+    public RobustIsomap(DoubleMatrix2D R, int m, Function<int[], IntPredicate> outlierPredicateFunction, IntPredicate samplePredicate) {
+        super(R, m, samplePredicate);
+        this.outlierPredicateFunction = outlierPredicateFunction;
     }
 
     private void solve() {
@@ -67,45 +54,8 @@ public class RobustIsomap {
         // Create a neighbourhood graph using all the known dissimilarities        
         // Directed, as we create both an in flow and out flow for each edge (for robustness)
         SimpleDirectedWeightedGraph<Integer, FlowEdge> weightedGraph = new SimpleDirectedWeightedGraph<>(FlowEdge.class);
-        for (int i = 0; i < n; ++i) {
-            weightedGraph.addVertex(i);
-        }
-
-        for (int i = 0; i < n; ++i) {
-
-            // Sort the nearest neighbours to this point
-            List<Pair<Integer, Double>> vertexDistanceMap = new ArrayList<>(n - 1);
-            for (int j = 0; j < n; ++j) {
-                if (i != j) {
-                    vertexDistanceMap.add(new Pair<>(j, Math.pow(R.get(i, j), m)));
-                }
-            }
-
-            vertexDistanceMap.sort((Pair<Integer, Double> lhs, Pair<Integer, Double> rhs)
-                    -> lhs.getSecond().compareTo(rhs.getSecond())
-            );
-
-            int pos = 0; // Add the k nearest neighbours to the graph
-            for (Pair<Integer, Double> itr : vertexDistanceMap) {
-                if (pos++ >= k) {
-                    break;
-                }
-
-                // Note directed and no parallel edges, so this allows flow in and out
-                FlowEdge edge = weightedGraph.addEdge(i, itr.getKey());
-                if (edge != null) {
-                    weightedGraph.setEdgeWeight(edge, itr.getValue());
-                    edge.zeroFlow();
-                }
-            }
-        }
-
-        // computes all the connected components of the graph
-        ConnectivityInspector ci = new ConnectivityInspector(weightedGraph);
-        List connectedSets = ci.connectedSets();
-        if (connectedSets.size() > 1) {
-            throw new IllegalArgumentException("Isomap requires a single connected set.");
-        }
+        connectGraph(weightedGraph);
+        checkIsSinglyConnected(new ConnectivityInspector(weightedGraph));
 
         boolean isRobust = false;
         int maxRobustnessIterations = 3;
