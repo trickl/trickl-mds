@@ -27,8 +27,11 @@ public class PlanarityMeasure {
     private final Type type;
     
     public double calculate(DoubleMatrix2D X, DoubleMatrix2D R) {
-       DoubleMatrix2D W = DoubleFactory2D.dense.make(R.rows(), R.columns());
-       W.assign(1.0);
+       DoubleMatrix2D W = R.like(R.rows(), R.columns());
+       R.forEachNonZero((int i, int j, double value) -> {
+            W.set(i, j, 1.0);
+            return value;
+       });
        return calculate(X, R, W);
     }
 

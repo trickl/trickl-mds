@@ -3,10 +3,20 @@ package com.trickl.mds;
 import cern.colt.matrix.DoubleFactory2D;
 import com.trickl.graph.ShortestPaths;
 import cern.colt.matrix.DoubleMatrix2D;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.UnaryOperator;
 import java.util.logging.Logger;
@@ -17,6 +27,7 @@ import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 import org.jgrapht.traverse.ClosestFirstIterator;
+import org.springframework.util.StringUtils;
 
 // J. B. Tenenbaum, V. de Silva, and J. C. Langford ISOMAP Algorithm
 // C++ Version built using Josh Tenenbaum's MatLab version as reference
@@ -110,10 +121,18 @@ public class Isomap {
         });              
     }
     
-    protected void checkIsSinglyConnected(ConnectivityInspector ci) {
-        List connectedSets = ci.connectedSets();
-        if (connectedSets.size() > 1) {
-            throw new IllegalArgumentException("Isomap requires a single connected set.");
+    protected <E> void ensureIsSinglyConnected(ConnectivityInspector<Integer, E> ci) {
+        List<Set<Integer>> connectedSets = ci.connectedSets();
+        while (connectedSets.size() > 1) {
+            int numberOfSets = connectedSets.size();            
+            List<Integer> sizes = new LinkedList<>();
+            for (Set set : connectedSets) {
+                sizes.add(set.size());
+            }
+            Collections.sort(sizes, Comparator.reverseOrder());
+            throw new IllegalArgumentException("Isomap requires a single connected set. There are " + numberOfSets + 
+                    " sets having sizes " + StringUtils.collectionToCommaDelimitedString(sizes));
+
         }
     }
     
@@ -137,8 +156,9 @@ public class Isomap {
         // Create a graph
         SimpleWeightedGraph<Integer, DefaultWeightedEdge> weightedGraph = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
         connectGraph(weightedGraph);
-        checkIsSinglyConnected(new ConnectivityInspector(weightedGraph));
-
+        
+        ensureIsSinglyConnected(new ConnectivityInspector(weightedGraph));
+        
         // Create a distance matrix of the shortest path between two nodes
         populateDistanceMatrixFromGraph(weightedGraph, S, value -> Math.pow(value, 1.0 / m), samplePredicate);
     }

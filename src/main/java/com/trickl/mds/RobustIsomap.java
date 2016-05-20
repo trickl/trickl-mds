@@ -6,6 +6,7 @@ import cern.colt.matrix.DoubleMatrix2D;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.logging.Level;
@@ -55,7 +56,8 @@ public class RobustIsomap extends Isomap {
         // Directed, as we create both an in flow and out flow for each edge (for robustness)
         SimpleDirectedWeightedGraph<Integer, FlowEdge> weightedGraph = new SimpleDirectedWeightedGraph<>(FlowEdge.class);
         connectGraph(weightedGraph);
-        checkIsSinglyConnected(new ConnectivityInspector(weightedGraph));
+        
+        ensureIsSinglyConnected(new ConnectivityInspector(weightedGraph));
 
         boolean isRobust = false;
         int maxRobustnessIterations = 3;

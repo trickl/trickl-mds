@@ -17,10 +17,16 @@ public class StressMeasure {
     }
     
     private final Type type;
+    private double stress = 0;
+    private double normalised_denominator = 0;
+    private double kruskal_denominator = 0;
     
     public double calculate(DoubleMatrix2D X, DoubleMatrix2D R) {
-       DoubleMatrix2D W = DoubleFactory2D.dense.make(R.rows(), R.columns());
-       W.assign(1.0);
+       DoubleMatrix2D W = R.like(R.rows(), R.columns());
+       R.forEachNonZero((int i, int j, double value) -> {
+            W.set(i, j, 1.0);
+            return value;
+       });
        return calculate(X, R, W);
     }
 
@@ -33,26 +39,27 @@ public class StressMeasure {
             throw new IllegalArgumentException("W must have the same dimensions as R.");
         }
 
-        double stress = 0;
-        double normalised_denominator = 0;
-        double kruskal_denominator = 0;
+        stress = 0;
+        normalised_denominator = 0;
+        kruskal_denominator = 0;
 
-        for (int i = 0; i < R.rows(); ++i) {
-            for (int j = 0; j < R.rows(); ++j) {
-                if (i > j) {
-                    // Actual distance
-                    double d2 = 0;
+        R.forEachNonZero((int i, int j, double value) -> {
+            if (i > j) {
+                // Actual distance
+                double d2 = 0;
 
-                    for (int k = 0; k < X.columns(); ++k) {
-                        d2 += Math.pow(X.get(i, k) - X.get(j, k), 2.);
-                    }
-
-                    stress += Math.pow(Math.sqrt(d2) - R.get(i, j), 2.0) * W.get(i, j);
-                    normalised_denominator += Math.pow(R.get(i, j), 2.0) * W.get(i, j);
-                    kruskal_denominator += d2 * W.get(i, j);
+                for (int k = 0; k < X.columns(); ++k) {
+                    d2 += Math.pow(X.get(i, k) - X.get(j, k), 2.);
                 }
+
+                stress += Math.pow(Math.sqrt(d2) - value, 2.0) * W.get(i, j);
+                normalised_denominator += Math.pow(value, 2.0) * W.get(i, j);
+                kruskal_denominator += d2 * W.get(i, j);
             }
-        }
+            
+            return value;
+        });
+        
 
         if (type == Type.Normalized) {
             stress /= normalised_denominator;
