@@ -32,11 +32,12 @@ public class LocalMdsTest {
       inclinedPlane.setNormal(normal);
       inclinedPlane.setBounds(new Rectangle(-5, -5, 10, 10));
       inclinedPlane.setNoiseStd(0.0);
-      DoubleMatrix2D data = inclinedPlane.generate(100);
+      DoubleMatrix2D data = inclinedPlane.generate(1000);
       
+      /*
       try (FileWriter writer = new FileWriter("inclined_plane.dat")) {
             writeToCsv(data, writer);
-        }
+        }*/
 
       // Generate similarity data
       EuclideanDistance distance = new EuclideanDistance();
@@ -44,6 +45,12 @@ public class LocalMdsTest {
       
       LocalMds mds = new LocalMds(R, 2, 4, new MersenneTwister(123456789));
       DoubleMatrix2D X = mds.getReducedSpace();
+      
+      /*
+      try (FileWriter writer = new FileWriter("inclined_plane_lmds.dat")) {
+            writeToCsv(X, writer);
+        }
+              */
       
       // Check the stress is below a threshold
       StressMeasure stressMeasure = new StressMeasure(StressMeasure.Type.Kruskal);
@@ -61,12 +68,12 @@ public class LocalMdsTest {
       inclinedPlane.setNormal(normal);
       inclinedPlane.setBounds(new Rectangle(-5, -5, 10, 10));
       inclinedPlane.setNoiseStd(0.5);
-      DoubleMatrix2D data = inclinedPlane.generate(100);
+      DoubleMatrix2D data = inclinedPlane.generate(1000);
       
-      
+      /*
         try (FileWriter writer = new FileWriter("inclined_plane_with_noise.dat")) {
             writeToCsv(data, writer);
-        }
+        } */
         
 
       // Generate similarity data
@@ -75,6 +82,11 @@ public class LocalMdsTest {
       
       LocalMds mds = new LocalMds(R, 2, 4, new MersenneTwister(123456789));
       DoubleMatrix2D X = mds.getReducedSpace();
+      
+      /*
+      try (FileWriter writer = new FileWriter("inclined_plane_with_noise_lmds.dat")) {
+            writeToCsv(X, writer);
+        } */
       
       // Check the stress is below a threshold
       StressMeasure stressMeasure = new StressMeasure(StressMeasure.Type.Kruskal);
