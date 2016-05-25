@@ -87,7 +87,7 @@ public class ShortestPathsTest {
         graph.edgeSet().stream().forEach((edge) -> {
             edgeFlow.put(edge, 0);
         });
-        ShortestPaths<Integer, DefaultWeightedEdge> shortestPaths = new ShortestPaths<>(graph, 0, edge -> {
+        ShortestPaths<Integer, DefaultWeightedEdge> shortestPaths = new ShortestPaths<>(graph, 0, Double.MAX_VALUE, Integer.MAX_VALUE, edge -> {
             edgeFlow.put(edge, edgeFlow.get(edge) + 1);
         });
         shortestPaths.getDistances();

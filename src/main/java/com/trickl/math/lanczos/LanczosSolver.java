@@ -92,8 +92,14 @@ public class LanczosSolver extends TridiagonalMatrix {
     int vec2index; 
     int[] M1, M2;
     List<Integer> Ma = new LinkedList<>();
+    
+    public LanczosSolver(DoubleMatrix2D matrix) 
+    {
+       this(matrix, Math.pow(epsilon, 2. / 3.));
+    }
 
-    public LanczosSolver(DoubleMatrix2D matrix) {
+    public LanczosSolver(DoubleMatrix2D matrix, double errorTolerance) {
+        super(errorTolerance);
         if (matrix.rows() != matrix.columns()) throw new IllegalArgumentException("Matrix must be real, symmetric.");
         this.matrix = matrix;
         this.startvector = matrix.like1D(matrix.rows());
@@ -193,7 +199,7 @@ public class LanczosSolver extends TridiagonalMatrix {
                     
                     // search for the value of nth starts, where nth is the nth eigen vector in z.            
                     for (nth = ma - 1; nth >= 0; nth--) {
-                        if (Math.abs(eval[nth] - eigenvalues[pos]) <= thold) {
+                        if (Math.abs(eval[nth] - eigenvalues[pos]) <= threshold) {
                             break;
                         }
                     }     
@@ -207,13 +213,13 @@ public class LanczosSolver extends TridiagonalMatrix {
                     } else {
                         nthEigenvector = eigenDecomposition.getEigenvector(ma - 1 - nth).toArray();
                         error = Math.abs(beta[ma - 1] * nthEigenvector[ma - 1]); // beta[ma - 1] = betaMplusOne.
-                        if (error > error_tol) {
+                        if (error > errorTolerance) {
                             ma += deltam;
                         }
                     } // end of else
-                } while (error > error_tol && count < maxcount);
+                } while (error > errorTolerance && count < maxcount);
 
-                if (error > error_tol) {
+                if (error > errorTolerance) {
                     eigvectors.get(eigvectors.size() - 1).assign(0);
                     errInf = ErrorInfo.NOT_CALCULATED;
                 } else { // if error is small enough.
@@ -323,8 +329,8 @@ public class LanczosSolver extends TridiagonalMatrix {
             while (pos != eigenvalues.length) {
                 if (M1[M1_itr] == 0 || M2[M2_itr] == 0) {
                     double eigenvalue = eigenvalues[pos];
-                    int ub = Sorting.LowerBound(eval, eigenvalue + thold);
-                    int lb = Sorting.UpperBound(eval, eigenvalue - thold);
+                    int ub = Sorting.LowerBound(eval, eigenvalue + threshold);
+                    int lb = Sorting.UpperBound(eval, eigenvalue - threshold);
 
                     if (M1[M1_itr] == 0 && ub - lb >= 1) {
                         M1[M1_itr] = n;

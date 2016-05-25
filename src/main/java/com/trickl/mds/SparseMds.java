@@ -9,6 +9,7 @@ import com.trickl.math.lanczos.LanczosSolver;
 import com.trickl.math.lanczos.iteration.LanczosIteration;
 import com.trickl.math.lanczos.iteration.LanczosIterationNHighest;
 import com.trickl.pca.EigenspaceModel;
+import java.util.Arrays;
 import org.apache.commons.math3.random.MersenneTwister;
 import org.apache.commons.math3.random.RandomGenerator;
 
@@ -21,11 +22,19 @@ public class SparseMds implements EigenspaceModel {
     private final DoubleMatrix2D mean;
     private DoubleMatrix2D eigenvectors;
     private double[] eigenvalues;
+    private double relTolerance;
+    private double absTolerance;
     
     public SparseMds(DoubleMatrix2D R, int p) {
+       this (R, p, 1e-8, 1e-10);
+    }
+    
+    public SparseMds(DoubleMatrix2D R, int p, double relTolerance, double absTolerance) {
         if (R.rows() != R.columns()) throw new IllegalArgumentException("Relation matrix must be square.");
         this.p = p;
         this.R = R;   
+        this.relTolerance = relTolerance;
+        this.absTolerance = absTolerance;
         this.X = DoubleFactory2D.dense.make(R.rows(), p);
         this.mean = X.like(X.rows() > 0 ? 1 : 0, X.columns());
         
@@ -39,11 +48,12 @@ public class SparseMds implements EigenspaceModel {
         DoubleMatrix2D B = CenteringMatrix.getDoubleCentered(R, (value) -> value * value);
         
         int maxIterations = R.rows();
-        LanczosIteration iter = new LanczosIterationNHighest(maxIterations, p, 1e-10, 1e-10);
+        LanczosIteration iter = new LanczosIterationNHighest(maxIterations, p, relTolerance, absTolerance);
         RandomGenerator randomGenerator = new MersenneTwister(123456789);
-        LanczosSolver solver = new LanczosSolver(B);    
+        LanczosSolver solver = new LanczosSolver(B, absTolerance);    
         solver.calculateEigenvalues(iter, randomGenerator);
-        eigenvalues = solver.getEigenvalues();
+        double[] allEigenvalues = solver.getEigenvalues();
+        eigenvalues = Arrays.copyOfRange(allEigenvalues, allEigenvalues.length - p, allEigenvalues.length);
         randomGenerator = new MersenneTwister(123456789);
         eigenvectors = solver.getEigenvectors(eigenvalues, randomGenerator, maxIterations);   
         

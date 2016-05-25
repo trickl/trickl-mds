@@ -5,14 +5,13 @@ import com.trickl.math.DistanceMeasure;
 import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.impl.DenseDoubleMatrix1D;
-import cern.jet.random.engine.MersenneTwister;
 import com.trickl.dataset.SwissRoll3D;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.math3.random.MersenneTwister;
 import org.junit.Test;
 import org.springframework.util.StringUtils;
 
@@ -25,7 +24,7 @@ public class IsomapTest {
 
         // Use the swiss roll generator to create a swiss roll
         SwissRoll3D swissRoll = new SwissRoll3D();
-        swissRoll.setRandomEngine(new MersenneTwister(123456789));
+        swissRoll.setRandomGenerator(new MersenneTwister(123456789));
         swissRoll.setNormal(normal);
         swissRoll.setRevolutions(1.5);
         swissRoll.setNoiseStd(0);
@@ -42,8 +41,7 @@ public class IsomapTest {
         DistanceMeasure distanceMeasure = new EuclideanDistance();
         DoubleMatrix2D R = distanceMeasure.getDistances(data);
 
-        DoubleMatrix2D Rk = Isomap.kNearest(R, 5);
-        Isomap isomap = new Isomap(Rk, 2);
+        Isomap isomap = new Isomap(R, 2);
         DoubleMatrix2D S = isomap.getMappedRelations();
 
         // Run mapped data through classical mds and project into two dimensions

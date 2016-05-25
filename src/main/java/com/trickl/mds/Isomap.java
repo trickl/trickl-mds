@@ -3,8 +3,6 @@ package com.trickl.mds;
 import cern.colt.matrix.DoubleFactory2D;
 import com.trickl.graph.ShortestPaths;
 import cern.colt.matrix.DoubleMatrix2D;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,20 +11,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.function.UnaryOperator;
 import java.util.logging.Logger;
-import org.jgrapht.DirectedGraph;
-import org.jgrapht.UndirectedGraph;
 import org.jgrapht.WeightedGraph;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
-import org.jgrapht.traverse.ClosestFirstIterator;
 import org.springframework.util.StringUtils;
 
 // J. B. Tenenbaum, V. de Silva, and J. C. Langford ISOMAP Algorithm
@@ -48,19 +39,28 @@ public class Isomap {
     
     // Only calculate full graph distances for the indexes where this evaluates to true
     // This can reduce computational complexity drastically.
-    protected final IntPredicate samplePredicate;
+    protected final UnaryOperator<Integer> getVertexMaxDepth;
     
     public Isomap(DoubleMatrix2D R, int m) {
-        this(R, m, index -> true); // Sample every vertex
+        this(R, m, index -> Integer.MAX_VALUE); // Sample every vertex
+        
+        
+        double tolerance = 1e-10;
+        R.forEachNonZero((i, j, value) -> {
+            if (Math.abs(R.get(j, i) - value) > tolerance || value < 0) {
+                throw new RuntimeException("R must be positive definite and symmetric");
+            }
+            return value;
+        });        
     }
 
-    public Isomap(DoubleMatrix2D R, int m, IntPredicate samplePredicate) {
+    public Isomap(DoubleMatrix2D R, int m, UnaryOperator<Integer> getVertexMaxDepth) {
         if (R.rows() != R.columns()) {
             throw new IllegalArgumentException("Relation matrix must be square.");
         }
         this.m = m;
         this.R = R;
-        this.samplePredicate = samplePredicate;
+        this.getVertexMaxDepth = getVertexMaxDepth;
     }
     
     public DoubleMatrix2D getMappedRelations() {
@@ -68,6 +68,15 @@ public class Isomap {
             S = R.like();
             solve();
         }
+        
+        double tolerance = 1e-10;
+        S.forEachNonZero((i, j, value) -> {
+            if (Math.abs(S.get(j, i) - value) > tolerance || value < 0) {
+                throw new RuntimeException("S (result) should be positive definite and symmetric");
+            }
+            return value;
+        }); 
+        
         return S;
     }
     
@@ -138,14 +147,16 @@ public class Isomap {
     
     protected static <E> void populateDistanceMatrixFromGraph(WeightedGraph<Integer, E> weightedGraph, DoubleMatrix2D S, 
             UnaryOperator<Double> distanceTransform,
-            IntPredicate samplePredicate) {
+            UnaryOperator<Integer> getVertexMaxDepth) {
         weightedGraph.vertexSet().stream().forEach((i) -> {
-            if (samplePredicate.test(i)) {
-                ShortestPaths<Integer, E> shortestPaths = new ShortestPaths<>(weightedGraph, i);
-                shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
-                    S.set(i, vertexDistance.getKey(), distanceTransform.apply(vertexDistance.getValue()));
-                });
-            }
+            ShortestPaths<Integer, E> shortestPaths = new ShortestPaths<>(weightedGraph, i, Double.MAX_VALUE,
+                getVertexMaxDepth.apply(i));
+            shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
+                int j = vertexDistance.getKey();
+                double distance = distanceTransform.apply(vertexDistance.getValue());
+                S.set(i, j, distance);
+                S.set(j, i, distance);
+            });            
         });
     }
 
@@ -160,6 +171,6 @@ public class Isomap {
         ensureIsSinglyConnected(new ConnectivityInspector(weightedGraph));
         
         // Create a distance matrix of the shortest path between two nodes
-        populateDistanceMatrixFromGraph(weightedGraph, S, value -> Math.pow(value, 1.0 / m), samplePredicate);
+        populateDistanceMatrixFromGraph(weightedGraph, S, value -> Math.pow(value, 1.0 / m), getVertexMaxDepth);
     }
 }

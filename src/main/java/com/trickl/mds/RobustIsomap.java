@@ -3,19 +3,14 @@ package com.trickl.mds;
 import com.trickl.graph.FlowEdge;
 import com.trickl.graph.ShortestPaths;
 import cern.colt.matrix.DoubleMatrix2D;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
+import java.util.function.UnaryOperator;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.apache.commons.math3.util.Pair;
 import org.jgrapht.alg.ConnectivityInspector;
-import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleDirectedWeightedGraph;
-import org.jgrapht.graph.SimpleWeightedGraph;
 
 // Based on the edge flow idea that allows removing critical outliers for robustness
 // Note this implementation does not implement the Kernel feature.
@@ -40,11 +35,11 @@ public class RobustIsomap extends Isomap {
     private final Function<int[], IntPredicate> outlierPredicateFunction;
 
     public RobustIsomap(DoubleMatrix2D R, int m, Function<int[], IntPredicate> outlierPredicateFunction) {
-        this(R, m, outlierPredicateFunction, index -> true);
+        this(R, m, outlierPredicateFunction, index -> Integer.MAX_VALUE);
     }
     
-    public RobustIsomap(DoubleMatrix2D R, int m, Function<int[], IntPredicate> outlierPredicateFunction, IntPredicate samplePredicate) {
-        super(R, m, samplePredicate);
+    public RobustIsomap(DoubleMatrix2D R, int m, Function<int[], IntPredicate> outlierPredicateFunction, UnaryOperator<Integer> getVertexMaxDepth) {
+        super(R, m, getVertexMaxDepth);
         this.outlierPredicateFunction = outlierPredicateFunction;
     }
 
@@ -64,15 +59,19 @@ public class RobustIsomap extends Isomap {
         for (int robustnessIteration = 0; isRobust == false && robustnessIteration <= maxRobustnessIterations; ++robustnessIteration) {
 
             // Create a distance and flow map of the shortest path between two nodes
-            weightedGraph.vertexSet().stream().forEach((i) -> {
-                if (samplePredicate.test(i)) {
-                    ShortestPaths<Integer, FlowEdge> shortestPaths = new ShortestPaths<>(weightedGraph, i, (com.trickl.graph.FlowEdge edge) -> {
-                        edge.incrementFlow();
-                    });
-                    shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
-                        S.set(i, vertexDistance.getKey(), Math.pow(vertexDistance.getValue(), 1.0 / m));
-                    });
-                }
+            UnaryOperator<Double> distanceTransform = value -> Math.pow(value, 1.0 / m);
+            weightedGraph.vertexSet().stream().forEach((i) -> {                
+                ShortestPaths<Integer, FlowEdge> shortestPaths = new ShortestPaths<>(weightedGraph, i, Double.MAX_VALUE, 
+                        getVertexMaxDepth.apply(i),
+                        (com.trickl.graph.FlowEdge edge) -> {
+                    edge.incrementFlow();
+                });
+                shortestPaths.getDistances().entrySet().stream().forEach((vertexDistance) -> {
+                    int j = vertexDistance.getKey();
+                    double distance = distanceTransform.apply(vertexDistance.getValue());
+                    S.set(i, j, distance);
+                    S.set(j, i, distance);
+                });                
             });
 
             // Summarise the edge flows

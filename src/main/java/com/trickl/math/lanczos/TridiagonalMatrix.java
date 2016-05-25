@@ -20,14 +20,14 @@ import org.apache.commons.math3.util.Pair;
  */
 public class TridiagonalMatrix {
 
-    private final double epsilon = 1e-16;
+    protected static final double epsilon = 1e-16;
     protected double[] alpha = new double[0];
     protected double[] beta = new double[0];
-    protected final double error_tol;
-    protected double thold;
+    protected final double errorTolerance;
+    protected double threshold;
 
     private boolean computed;
-    private double multol;
+    private double multipleTolerance;
     protected final List<Double> err = new LinkedList<>();
     protected final List<Double> err_noghost = new LinkedList<>();
     protected final List<Double> eigval_distinct = new LinkedList<>(); // distinct eigen values.
@@ -37,9 +37,13 @@ public class TridiagonalMatrix {
     private double alpha_max;
     private double beta_max;
     private double beta_min;
-
+    
     public TridiagonalMatrix() {
-        error_tol = Math.pow(epsilon, 2. / 3.);
+        this(Math.pow(epsilon, 2. / 3.));
+    }
+
+    public TridiagonalMatrix(double errorTolerance) {
+        this.errorTolerance = errorTolerance;
     }
 
     public double[] getEigenvalues() {
@@ -145,9 +149,9 @@ public class TridiagonalMatrix {
         Arrays.sort(eval); // Consistent with IETL
     
         // tolerance values:
-        multol = Math.max(alpha_max, beta_max) * 2 * epsilon * (1000 + n);
-        thold = Math.max(eval[0], eval[n - 1]);
-        thold = Math.max(error_tol * thold, 5 * multol);
+        multipleTolerance = Math.max(alpha_max, beta_max) * 2 * epsilon * (1000 + n);
+        threshold = Math.max(eval[0], eval[n - 1]);
+        threshold = Math.max(errorTolerance * threshold, 5 * multipleTolerance);
 
     // error estimates of eigen values starts:    
         // the unique eigen values selection, their multiplicities and corresponding errors calculation follows:
@@ -157,7 +161,7 @@ public class TridiagonalMatrix {
 
         for (int i = 1; i < n; i++) {
             double[] eigenvector = eigenDecomposition.getEigenvector(eval.length - i).toArray();
-            if (Math.abs(eval[i] - temp) > thold) {
+            if (Math.abs(eval[i] - temp) > threshold) {
                 eigval_distinct.add(eval[i]);
                 temp = eval[i];
                 multiplicty.add(multiple);
@@ -194,11 +198,11 @@ public class TridiagonalMatrix {
         for (double eigval : eigval_distinct) {            
             if (multiplicty.get(i) == 1) { // test of spuriousness for the eigenvalues whose multiplicity is one.
                 for (int j = t2; j < n - 1; j++, t2++) { // since size of reduced matrix is n-1
-                    if (eval_g[j] - eigval >= multol) {
+                    if (eval_g[j] - eigval >= multipleTolerance) {
                         break;
                     }
 
-                    if (Math.abs(eigval - eval_g[j]) < multol) {
+                    if (Math.abs(eigval - eval_g[j]) < multipleTolerance) {
                         multiplicty.set(i, 0);
                         err.set(i, .0); // if eigen value is a ghost => error calculation not required, 0=> ignore error.
                         t2++;
