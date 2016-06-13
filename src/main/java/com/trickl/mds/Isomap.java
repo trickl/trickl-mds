@@ -3,6 +3,7 @@ package com.trickl.mds;
 import cern.colt.matrix.DoubleFactory2D;
 import com.trickl.graph.ShortestPaths;
 import cern.colt.matrix.DoubleMatrix2D;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.IntPredicate;
 import java.util.function.UnaryOperator;
 import java.util.logging.Logger;
@@ -122,16 +124,18 @@ public class Isomap {
         
         R.forEachNonZero((i, j, value) -> {
             // Note undirected and no parallel edges, so this allows flow in and out         
-            E edge = weightedGraph.addEdge(i, j);
-            if (edge != null) {
-                weightedGraph.setEdgeWeight(edge, Math.pow(value, m));
+            if (i != j) {
+                E edge = weightedGraph.addEdge(i, j);
+                if (edge != null) {
+                    weightedGraph.setEdgeWeight(edge, Math.pow(value, m));
+                }
             }
             return value;
         });              
     }
     
     protected <E> void ensureIsSinglyConnected(ConnectivityInspector<Integer, E> ci) {
-        List<Set<Integer>> connectedSets = ci.connectedSets();
+        List<Set<Integer>> connectedSets = getConnectedSetsOrderedByDecreasingSize(ci);
         while (connectedSets.size() > 1) {
             int numberOfSets = connectedSets.size();            
             List<Integer> sizes = new LinkedList<>();
@@ -143,6 +147,24 @@ public class Isomap {
                     " sets having sizes " + StringUtils.collectionToCommaDelimitedString(sizes));
 
         }
+    }
+    
+    protected <E> List<Set<Integer>> getConnectedSetsOrderedByDecreasingSize(ConnectivityInspector<Integer, E> ci) {
+        List<Set<Integer>> connectedSets = ci.connectedSets();
+        Collections.sort(connectedSets, (lhs, rhs) -> -Integer.compare(lhs.size(), rhs.size()));
+        return connectedSets;
+    }
+    
+    public int[] getDisconnectedItems() {
+        SimpleWeightedGraph<Integer, DefaultWeightedEdge> weightedGraph = new SimpleWeightedGraph<>(DefaultWeightedEdge.class);
+        connectGraph(weightedGraph);
+        
+        List<Set<Integer>> connectedSets = getConnectedSetsOrderedByDecreasingSize(new ConnectivityInspector(weightedGraph));
+        Set<Integer> disconnected = new TreeSet<>();
+        for (int i = 1; i < connectedSets.size(); ++i) {
+           disconnected.addAll(connectedSets.get(i));
+        }
+        return disconnected.stream().mapToInt(i -> i).toArray();
     }
     
     protected static <E> void populateDistanceMatrixFromGraph(WeightedGraph<Integer, E> weightedGraph, DoubleMatrix2D S, 
